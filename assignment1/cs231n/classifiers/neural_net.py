@@ -74,7 +74,10 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    H1 = X.dot(W1) + b1;
+    A1 = np.maximum(H1,0)
+    scores = A1.dot(W2) + b2;
+    
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,7 +95,13 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    loss = 0
+    num_class = W2.shape[1] 
+    prob = np.exp(scores) / np.tile(np.sum(np.exp(scores),axis=1),[num_class,1]).T
+    for i in xrange(N):
+      loss += -np.log(prob[i,y[i]])
+    loss /= N
+    loss += 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -104,7 +113,23 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    dLdH2 = prob 
+    for i in xrange(N):
+      tmp = np.zeros(num_class)
+      tmp[y[i]] = -1
+      dLdH2[i] += tmp
+    
+    dLdW2 = A1.T.dot(dLdH2)
+    dLdb2 = np.sum(dLdH2,axis=0)
+
+    dLdH1 = dLdH2.dot(W2.T) * (A1>0)
+    dLdW1 = X.T.dot(dLdH1)
+    dLdb1 = np.sum(dLdH1,axis=0)
+
+    grads['W1'] = dLdW1 + reg * W1
+    grads['b1'] = dLdb1 
+    grads['W2'] = dLdW2 + reg * W2
+    grads['b2'] = dLdb2
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
