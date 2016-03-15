@@ -90,16 +90,18 @@ def svm_loss_vectorized(W, X, y, reg):
   loss /= num_train
 
   
-  for i  in xrange(num_class):
-      idx = np.ones(num_train)
-      idx[np.where(result[:,i]<=0)] = 0
-      bLable = np.ones(num_train)
-      bLable[np.where(y==i)] = 1-num_class
-      dW[:,i] = np.sum(X * np.transpose(np.tile(idx,[dim,1])) * np.transpose(np.tile(bLable,[dim,1])), axis=0)
+  weight = np.array((result>0).astype(int))
+  weight_yi = -np.sum(weight,axis=1)
+
+  for i in xrange(num_train):
+      weight[i,y[i]] = weight_yi[i]
+
+  for i in xrange(num_train):
+      ddw = X[i,:] * weight[i,:].reshape(-1,1)
+      dW += ddw.T
 
   dW /= num_train
-
-
+  
   loss += 0.5 * reg * np.sum(W*W)
   dW += W * reg
 
