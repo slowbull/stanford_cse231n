@@ -182,14 +182,15 @@ class FullyConnectedNet(object):
     # parameters should be initialized to zero.                                #
     ############################################################################
 
-    hidden_dims.insert(0,input_dim)
-    layers = hidden_dims
-    num_layers = len(layers)
-    for i in xrange(num_layers-1):
-        w_name = 'W' + str(i+1)
-        b_name = 'b' + str(i+1)
-        self.params[w_name] = weight_scale * np.random.randn(layers[i],layers[i+1])
-        self.params[b_name] = np.zeros(layers[i+1])
+    layers = hidden_dims[:]
+    layers.insert(0,input_dim)
+    layers.append(num_classes)
+
+    for i in xrange(1,self.num_layers+1):
+        w_name = 'W' + str(i)
+        b_name = 'b' + str(i)
+        self.params[w_name] = weight_scale * np.random.randn(layers[i-1],layers[i])
+        self.params[b_name] = np.zeros(layers[i])
 
 
     ############################################################################
@@ -251,10 +252,12 @@ class FullyConnectedNet(object):
     ############################################################################
     caches = {}
     out = {}
-    num_layers = len(self.params)/2
+    num_layers = self.num_layers
     out[0] = X
-    for i in xrange(num_layers):
-        out[i+1], caches[i+1] = affine_forward(out[i], self.params['W'+str(i+1)], self.params['b'+str(i+1)])
+    for i in xrange(num_layers-1):
+        out[i+1], caches[i+1] = affine_relu_forward(out[i], self.params['W'+str(i+1)], self.params['b'+str(i+1)])
+
+    out[num_layers], caches[num_layers] = affine_forward(out[num_layers-1], self.params['W'+str(num_layers)], self.params['b'+str(num_layers)])
 
     scores = out[num_layers]
     ############################################################################
@@ -286,10 +289,12 @@ class FullyConnectedNet(object):
         tmpW = self.params['W'+str(i+1)]
         loss += 0.5 * self.reg * np.sum(tmpW*tmpW) 
 
+    dout[num_layers-1], grads['W'+str(num_layers)], grads['b'+str(num_layers)] = affine_backward(dout[num_layers], caches[num_layers])
+    grads['W'+str(num_layers)] += self.reg * self.params['W'+str(num_layers)]
 
-    for i in xrange(num_layers):
-        dout[num_layers-i-1], grads['W'+str(num_layers-i)], grads['b'+str(num_layers-i)] = affine_backward(dout[num_layers-i], caches[num_layers-i])
-        grads['W'+str(num_layers-i)] += self.reg * self.params['W'+str(num_layers-i)]
+    for i in xrange(num_layers-1):
+        dout[num_layers-i-2], grads['W'+str(num_layers-i-1)], grads['b'+str(num_layers-i-1)] = affine_relu_backward(dout[num_layers-i-1], caches[num_layers-i-1])
+        grads['W'+str(num_layers-i-1)] += self.reg * self.params['W'+str(num_layers-i-1)]
 
     ############################################################################
     #                             END OF YOUR CODE                             #
