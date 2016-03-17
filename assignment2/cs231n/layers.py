@@ -596,7 +596,12 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
-  pass
+  out = np.zeros_like(x)
+  cache = {}
+  for i in xrange(x.shape[1]):
+      tmp, cache[i] = batchnorm_forward(x[:,i,:,:].reshape(x.shape[0],-1), gamma[i], beta[i], bn_param)
+      out[:,i,:,:] = tmp.reshape(x.shape[0],x.shape[2],x.shape[3])
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -626,7 +631,17 @@ def spatial_batchnorm_backward(dout, cache):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
-  pass
+  C = dout.shape[1]
+  dx = np.zeros_like(dout)
+  dgamma = np.zeros(C)
+  dbeta = np.zeros(C)
+  for i in xrange(C):
+      tmp_dx, tmp_dgamma, tmp_dbeta = batchnorm_backward(dout[:,i,:,:].reshape(dout.shape[0],-1), cache[i]) 
+      dx[:,i,:,:] = tmp_dx.reshape(dout.shape[0],dout.shape[2],dout.shape[3])
+      dgamma[i] = np.sum(tmp_dgamma)
+      dbeta[i] = np.sum(tmp_dbeta)
+
+      
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
