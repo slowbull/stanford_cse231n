@@ -135,7 +135,26 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    pass
+    # forward
+    T = captions.shape[1]
+    #captions_in = np.hstack(([[self._start]]*captions_in.shape[0], captions_in))
+    #captions_out = np.hstack((captions_out, [[self._end]]*captions_out.shape[0]))
+    #np.int_(captions_in)
+    #np.int_(captions_out)
+    h0 = features.dot(W_proj) + b_proj
+    out_embed, cache_embed = word_embedding_forward(captions_in, W_embed)
+    out_rnn, cache_rnn = rnn_forward(out_embed, h0, Wx, Wh, b)
+    out_aff, cache_aff = temporal_affine_forward(out_rnn, W_vocab, b_vocab)
+    loss, d_loss = temporal_softmax_loss(out_aff, captions_out, mask)
+
+    # backward
+    d_aff, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(d_loss, cache_aff)
+    d_rnn, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(d_aff, cache_rnn)
+    grads['W_embed'] = word_embedding_backward(d_rnn, cache_embed)
+    grads['W_proj'] = features.T.dot(dh0) 
+    grads['b_proj'] = np.sum(dh0,axis=0)
+
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -197,7 +216,18 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    pass
+    h0 = features.dot(W_proj) + b_proj
+    N = features.shape[0]
+    captions = np.zeros((N,max_length),dtype=np.int32)
+    captions[:,0] = self._start
+
+    for i in xrange(1,max_length):
+        out_embed, cache_embed = word_embedding_forward(captions[:,i-1].reshape(N,1), W_embed)
+        out_embed = out_embed.reshape(N,-1)
+        h0, cache_rnn = rnn_step_forward(out_embed, h0, Wx, Wh, b)
+        tmp = h0.dot(W_vocab) + b_vocab
+        captions[:,i] = np.argmax(tmp, axis=1)
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
